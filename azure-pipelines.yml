@@ -1,50 +1,39 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
-trigger:
-- development
-
-pool:
-  name: MyAgentPool
-  demands:
-   -  mvn
-  
+# Docker
+# Build and push an image to Azure Container Registry
+# https://docs.microsoft.com/azure/devops/pipelines/languages/docker
  
-steps:
-
-  - task: SonarQubePrepare@7
-    inputs:
-     SonarQube: 'Sonar1'
-     scannerMode: 'other'
-     
-
-
-  - task: Maven@4
-    inputs:
-      mavenPomFile: 'pom.xml'
-      testResultsFiles: '**surefire-reports/TEST-*.xml'
-      javaHomeOption: JDKVersion
-      mavenVersionOption: Default
-     
-     
-  
-  - task: CopyFiles@2
-    inputs:
-      Contents: '**/target/*.jar'
-      TargetFolder: '$(Build.ArtifactStagingDirectory)'
-
-  - task: PublishPipelineArtifact@1
-    inputs:
-      targetPath: '$(Pipeline.Workspace)'
-      publishLocation: 'pipeline'
-      artifact: 'drop'
-
-
-
-
-    
-    
-
-
+trigger:
+- main
+ 
+resources:
+- repo: self
+ 
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: '2c83e4b6-37a8-4217-a0d6-3ff8036e4692'
+  imageRepository: 'adocontainer'
+  containerRegistry: 'adocontainer.azurecr.io'
+  dockerfilePath: 'Dockerfile'
+  tag: '$(Build.BuildId)'
+ 
+  # Agent VM image name
+  name: Default
+ 
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+       name: Default
+    steps:
+    - task: Docker@2
+      displayName: Build and push an image to container registry
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
